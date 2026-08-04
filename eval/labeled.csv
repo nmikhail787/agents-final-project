@@ -1,0 +1,101 @@
+query,filters,rank,doc_id,price,subcategory,title,relevant
+building set for a seven year old,{'max_price': 30},1,T00497,16.99,Building Toys,"Melissa & Doug Wooden Construction Building Set in a Box (Developmental Toy, 48 ",1
+building set for a seven year old,{'max_price': 30},2,T02465,16.99,Learning & Education,"Learning Resources Tree House Engineering & Design Building Set, 52 Pieces",1
+building set for a seven year old,{'max_price': 30},3,T02153,28.01,Building Toys,Small Foot Wooden Toys Farm Theme Wood and Knobs Building Blocks 80 Piece playse,1
+building set for a seven year old,{'max_price': 30},4,T05965,29.99,Building Toys,Brackitz Inventor Building Toy 44-Piece Set – Award-Winning STEM Kids Building K,1
+building set for a seven year old,{'max_price': 30},5,T02545,14.99,Baby & Toddler Toys,Hape Twist and Turnables Wooden Building Block Learning Set,0
+jigsaw puzzle for adults,{},1,T02676,14.99,Puzzles,Americana Souvenirs and Gifts The 50'S Jigsaw Puzzle (750-Piece),1
+jigsaw puzzle for adults,{},2,T03482,23.53,Puzzles,British Pier 275 Piece Jigsaw Puzzle,1
+jigsaw puzzle for adults,{},3,T00505,6.99,Puzzles,Melissa & Doug Jigsaw Puzzles Set - Bugs and Dinosaurs (60 pcs),0
+jigsaw puzzle for adults,{},4,T00481,9.99,Puzzles,"MasterPieces The Right Fit Kids Jigsaw Puzzle, 101 Things to Spot in the Woods, ",0
+jigsaw puzzle for adults,{},5,T03004,9.99,Puzzles,"Melissa & Doug 1,500-Piece Walk in the Park Jigsaw Puzzle (33 x 24 inches)",1
+soft plush animal for a toddler,{'max_price': 20},1,T04322,17.99,Stuffed Animals & Plush Toys,Animal Adventure | Cuddle Bundles | Woodland Sloth | Super-Soft Machine Washable,1
+soft plush animal for a toddler,{'max_price': 20},2,T04068,10.8,Stuffed Animals & Plush Toys,KIDS PREFERRED Carter's Elephant Plush Stuffed Animal Snuggler Blanket - Gray,1
+soft plush animal for a toddler,{'max_price': 20},3,T01785,16.85,Stuffed Animals & Plush Toys,"GUND Baby Toothpick Flamingo Plush Stuffed Animal 12"", Pink",1
+soft plush animal for a toddler,{'max_price': 20},4,T00712,14.99,Stuffed Animals & Plush Toys,"GUND Pusheen Pusheenicorn Unicorn Cat Sound Plush Stuffed Animal, Purple, 7.5""",1
+soft plush animal for a toddler,{'max_price': 20},5,T02384,11.55,Stuffed Animals & Plush Toys,"GUND Cozys Collection Frog Stuffed Animal Plush, Pale Olive, 8""",1
+science experiment kit for kids,{'max_price': 50},1,T01240,13.37,Learning & Education,Scientific Explorer My First Science Kids Science Experiment Kit,1
+science experiment kit for kids,{'max_price': 50},2,T03503,8.99,Learning & Education,"Hey! Play! Kids Science Kit-Lab Set to Create Solutions, Litmus Paper, & More-Gr",1
+science experiment kit for kids,{'max_price': 50},3,T01094,8.56,Learning & Education,Scientific Explorer Glow in The Dark Fun Lab Kids Science Experiment Kit,1
+science experiment kit for kids,{'max_price': 50},4,T04109,22.58,Learning & Education,Scientific Explorer Mind Blowing Science Kit with Scientific Explorer Magic Scie,1
+science experiment kit for kids,{'max_price': 50},5,T04781,15.98,Learning & Education,ScienceWiz / Energy Experiment Kit,1
+board game for family game night,"{'min_price': 10, 'max_price': 40}",1,T01721,18.44,Games & Accessories,Fireside Games Grackles - Board Games for Families - Board Games for Adults,1
+board game for family game night,"{'min_price': 10, 'max_price': 40}",2,T03199,15.59,Games & Accessories,Brain Games Voila! Board Game - A Fast and Fun Family Board Game - Play with Kid,1
+board game for family game night,"{'min_price': 10, 'max_price': 40}",3,T05203,12.49,Games & Accessories,"The Dog Game, Hilarious Family Game with Doggos, for Ages 8 & Up",1
+board game for family game night,"{'min_price': 10, 'max_price': 40}",4,T03022,20.0,Games & Accessories,Family Feud Trivia Box Card Game,1
+board game for family game night,"{'min_price': 10, 'max_price': 40}",5,T00675,12.49,Games & Accessories,SET Junior Board Game,1
+lego building kit,{'brand': 'LEGO'},1,T01574,14.59,Building Toys,LEGO Classic World Fun 10403 Building Kit (295 Piece),1
+lego building kit,{'brand': 'LEGO'},2,T02091,19.78,Building Toys,LEGO Classic Creative Suitcase 10713 Building Kit (213 Pieces),1
+lego building kit,{'brand': 'LEGO'},3,T00139,99.99,Building Toys,"LEGO Creator Expert Gingerbread House 10267 Building Kit, New 2020 (1,477 Pieces",1
+lego building kit,{'brand': 'LEGO'},4,T00808,29.95,Building Toys,"LEGO City Rover Testing Drive 60225 Building Kit, New 2019 (202 Pieces)",1
+lego building kit,{'brand': 'LEGO'},5,T04699,48.99,Building Toys,LEGO City Advent Calendar 60155 Building Kit,1
+art supplies for painting,{'max_price': 25},1,T05574,9.27,Hobbies,Vallejo Dark Grey Green 17ml Painting Accessories,1
+art supplies for painting,{'max_price': 25},2,T02424,7.83,Hobbies,Vallejo Metallic Green 17ml Painting Accessories,0
+art supplies for painting,{'max_price': 25},3,T03815,6.03,Hobbies,Vallejo Purple 17ml Painting Accessories,0
+art supplies for painting,{'max_price': 25},4,T05572,13.99,Hobbies,Vallejo Ivory 200ml Painting Accessories,1
+art supplies for painting,{'max_price': 25},5,T06014,6.53,Hobbies,Vallejo Pink 17ml Painting Accessories,0
+dollhouse accessories,{},1,T00855,13.99,Dolls & Accessories,"Fancy Nancy Winter Wonderland Doll Accessories, Purple/Blue",0
+dollhouse accessories,{},2,T01804,13.13,Dolls & Accessories,"Fancy Nancy 77418 Fantastique Doll-Sized Vanity (6 Piece), Multicolor",1
+dollhouse accessories,{},3,T00032,9.93,Dolls & Accessories,Barbie Babysitters Inc. Popcorn Set,1
+dollhouse accessories,{},4,T04238,142.9,Dolls & Accessories,"Becker's School Supplies Cuddle Me Dolls Set, (Set of 4)",0
+dollhouse accessories,{},5,T01530,58.99,Dolls & Accessories,Badger Basket 13 Piece Bedroom Furniture Play Set for 18 Inch (fits American Gir,1
+remote control car,{'max_price': 60},1,T00410,59.99,Hobbies,Kid Galaxy Remote Control Bumper Cars. RC 2 Player Game. 2 Cars and 2 Controller,1
+remote control car,{'max_price': 60},2,T05536,14.98,Kids' Electronics,Dimple Red RC Light Up Rechargeable Remote Controlled Acrobatic Flip Stunt Car f,1
+remote control car,{'max_price': 60},3,T00842,19.03,Hobbies,Maisto R/C 1:24 Scale 2017 Ford GT NAIAS Variable Color Radio Control Vehicle (C,1
+remote control car,{'max_price': 60},4,T02510,20.99,Hobbies,"SIMILKY Remote Control Car, 4WD RC Stunt Car Rotate 360 Double Sided Race RC Car",1
+remote control car,{'max_price': 60},5,T05701,18.99,Kids' Electronics,"PAW Patrol, Chase Remote Control Police Cruiser with 2-Way Steering, for Kids Ag",1
+card game for two players,{'max_price': 15},1,T03518,12.99,Learning & Education,"Edupress Splat Game, Addition (EP63759)",0
+card game for two players,{'max_price': 15},2,T02207,6.19,Games & Accessories,Ideal War Card Game,1
+card game for two players,{'max_price': 15},3,T00825,8.94,Games & Accessories,Monster Café Card Game,1
+card game for two players,{'max_price': 15},4,T02015,3.99,Games & Accessories,Imperial Kids Card Game - Go Fish,1
+card game for two players,{'max_price': 15},5,T01164,7.5,Games & Accessories,Challenge of The Superfriends Card Game,1
+wooden toys for babies,{'max_price': 30},1,T04070,7.86,Novelty & Gag Toys,Small World Toys Ryan's Room Wooden Toys - Sew 'N' Sew Lacing Toy,1
+wooden toys for babies,{'max_price': 30},2,T02744,6.99,Baby & Toddler Toys,"Baby Einstein Tiny Tambourine Wooden Musical Toy, 3 Months +",1
+wooden toys for babies,{'max_price': 30},3,T02153,28.01,Building Toys,Small Foot Wooden Toys Farm Theme Wood and Knobs Building Blocks 80 Piece playse,1
+wooden toys for babies,{'max_price': 30},4,T02545,14.99,Baby & Toddler Toys,Hape Twist and Turnables Wooden Building Block Learning Set,1
+wooden toys for babies,{'max_price': 30},5,T05380,8.99,Learning & Education,Small Foot Wooden Toys Counting Sticks Math Aid Educate Educational Toy Designed,0
+halloween costume for a child,{},1,T03529,27.07,Dress Up & Pretend Play,"Forum Novelties Zombie Girl Costume, Child's Medium",1
+halloween costume for a child,{},2,T04591,6.09,Dress Up & Pretend Play,Halloween Elastic Pony-O,0
+halloween costume for a child,{},3,T00845,31.14,Dress Up & Pretend Play,"California Costumes Evil Spirit Child Costume, Medium",1
+halloween costume for a child,{},4,T06090,19.92,Dress Up & Pretend Play,"California Costumes Horror Robe Child Costume, Small",1
+halloween costume for a child,{},5,T04608,5.39,Dress Up & Pretend Play,"Rubie's Storybook Princess Child's Costume Wig, Black Curls",0
+outdoor water toys for summer,{'max_price': 35},1,T00479,13.09,Novelty & Gag Toys,Poolmaster Smash 'n' Splash Water Paddle Ball Swimming Pool Game,1
+outdoor water toys for summer,{'max_price': 35},2,T02970,13.16,Toy Figures & Playsets,PLAYMOBIL Aquarium Shop Building Set,0
+outdoor water toys for summer,{'max_price': 35},3,T05958,7.53,Baby & Toddler Toys,"Little Twig Little Critter Squirt and Float Bath Time Toys, 6 Count",0
+outdoor water toys for summer,{'max_price': 35},4,T01391,29.99,Dolls & Accessories,Waterbabies Just Play Special Delivery Baby AA,0
+outdoor water toys for summer,{'max_price': 35},5,T01845,8.99,Baby & Toddler Toys,"Munchkin Ocean Squirts Bath Toy, 8 pack",0
+educational math learning toy,{'max_price': 40},1,T01863,28.92,Learning & Education,"Excellerations Math Manipulatives Set of 108 Farm Animal Counters 1.5"" -2"", STEM",1
+educational math learning toy,{'max_price': 40},2,T05380,8.99,Learning & Education,Small Foot Wooden Toys Counting Sticks Math Aid Educate Educational Toy Designed,1
+educational math learning toy,{'max_price': 40},3,T03640,21.58,Learning & Education,Small World Toys Learning - Math Lotto Matching Game,1
+educational math learning toy,{'max_price': 40},4,T02991,33.23,Learning & Education,"hand2mind VersaTiles Math Practice Take Along Set (Grade 1), Allow Kids to Learn",1
+educational math learning toy,{'max_price': 40},5,T00797,9.95,Learning & Education,Didax Educational Resources Smart Flash Cards - Multiplication Flash Cards,1
+model airplane kit,{},1,T02701,13.99,Hobbies,Minicraft F-15A Airplane Model Kit (1/144 Scale),1
+model airplane kit,{},2,T02375,19.99,Hobbies,Easy Model Hurricane MK II/Trop 1941 Russia Model Kits,1
+model airplane kit,{},3,T00919,58.21,Hobbies,Hobby Boss F-84G Thunderjet Airplane Model Building Kit,1
+model airplane kit,{},4,T05427,15.61,Hobbies,"Easy Model P-51D 3FS, 3FG, 5AF Model Kit",1
+model airplane kit,{},5,T00906,43.84,Hobbies,Airfix Boeing B-17 Fortress MK.III (1:72 Scale) Model Kit,1
+stuffed dinosaur,{'max_price': 25},1,T05221,9.46,Stuffed Animals & Plush Toys,"Wild Republic Stegosaurus Plush, Dinosaur Stuffed Animal, Plush Toy, Gifts for K",1
+stuffed dinosaur,{'max_price': 25},2,T00171,14.4,Stuffed Animals & Plush Toys,"Wild Republic T-Rex Plush, Dinosaur Stuffed Animal, Plush Toy, Gifts for Kids, D",1
+stuffed dinosaur,{'max_price': 25},3,T03408,16.03,Stuffed Animals & Plush Toys,"Rhode Island Novelty 20"" Dino Bp T-rex , Green",1
+stuffed dinosaur,{'max_price': 25},4,T01844,6.01,Arts & Crafts,Dinosaurs Motivational Stickers,0
+stuffed dinosaur,{'max_price': 25},5,T01460,8.32,Puzzles,Family Games America 3D Puzzles - Dinosaurs Puzzle,0
+party balloons and decorations,{'max_price': 20},1,T02937,5.99,Party Supplies,Clear Latex Balloons Swirly Scrolls | Pack of 6 | Party Decor,1
+party balloons and decorations,{'max_price': 20},2,T01617,9.3,Party Supplies,"Unique Party 56849 - 12"" Latex Blush Pink Balloons, Pack of 50",1
+party balloons and decorations,{'max_price': 20},3,T01722,8.78,Party Supplies,PartyWoo Valentines Day Balloons 12 inches Printed Heart Balloons 50 Packs for W,1
+party balloons and decorations,{'max_price': 20},4,T05525,9.79,Party Supplies,Creative Converting Hanging Décor New Year Countdown Banner,1
+party balloons and decorations,{'max_price': 20},5,T01091,19.99,Party Supplies,"Anagram International A11362002 Oklahoma City Thunder Flat Party Balloons, 18"", ",1
+magic tricks set,{},1,T04940,18.99,Novelty & Gag Toys,Click N' Play Magician Dress Up Magic Tricks Set for Kids Over 150 Tricks Includ,1
+magic tricks set,{},2,T02742,17.61,Novelty & Gag Toys,Marvin's Magic 25 Mind Blowing Incredible Card Tricks,1
+magic tricks set,{},3,T00496,14.37,Novelty & Gag Toys,"Mudpuppy 15 Easy-to-Learn Tricks Magic Set, Ages 6 & Up",1
+magic tricks set,{},4,T02243,14.13,Novelty & Gag Toys,Melissa & Doug Magic in a Snap! Hocus Pocus Collection Magic Tricks Set (Profess,1
+magic tricks set,{},5,T02492,49.99,Novelty & Gag Toys,MMS Keynote Speaking for Magicians by Paul Rohmany - Book,0
+puzzle for a four year old,{'max_price': 15},1,T01225,10.99,Learning & Education,Junior Learning Homonym Puzzles,0
+puzzle for a four year old,{'max_price': 15},2,T06274,12.75,Learning & Education,4M Kidzrobotix Doodling Robot - DIY Science Engineering Robotics Kit - STEM Toys,0
+puzzle for a four year old,{'max_price': 15},3,T05279,10.75,Puzzles,"Mudpuppy Four Seasons 4-in-A-Box Puzzles, Ages 2-5 - Set of 4 Weather Seasons Pu",1
+puzzle for a four year old,{'max_price': 15},4,T03426,11.55,Dress Up & Pretend Play,4M Paint Your Own Mini Tea Set,0
+puzzle for a four year old,{'max_price': 15},5,T06173,14.99,Baby & Toddler Toys,The Learning Journey Puzzle Doubles Glow in the Dark – Pirate Ship – 100 Piece G,1
+action figure collectible,{'max_price': 50},1,T01550,14.21,Toy Figures & Playsets,RWBY Weiss Schnee Collectible Figure,1
+action figure collectible,{'max_price': 50},2,T03188,19.18,Toy Figures & Playsets,DC Comics Multiverse Red Robin Figure,1
+action figure collectible,{'max_price': 50},3,T00058,29.99,Toy Figures & Playsets,The Corps Special Forces Action Figures & Vehicle Deluxe Playset (Packaging & Co,1
+action figure collectible,{'max_price': 50},4,T03154,44.99,Toy Figures & Playsets,"Click N' Play Military Desert Camping 12"" Action Figure with Locker Storage Box ",1
+action figure collectible,{'max_price': 50},5,T02609,19.99,Toy Figures & Playsets,Transformers Cogman Action Figure,1
