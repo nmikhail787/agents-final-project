@@ -4,12 +4,29 @@ Agentic voice assistant for product discovery: speak a request, a LangGraph
 pipeline routes it, retrieves grounded evidence from a private catalog and
 optionally the live web via MCP, and answers by TTS with on-screen citations.
 
+## You need your own API key
+
+The `web.search` MCP tool calls **SerpApi**. Everyone runs their own key — none
+is committed, and `.env` is gitignored.
+
+1. Sign up at **https://serpapi.com** (free plan, 250 searches/month, no card).
+2. Copy your key from the *API Key* page in the dashboard.
+3. `cp .env.example .env` and set `SERPAPI_API_KEY=<your key>`.
+
+> SerpApi (serpapi.com) and Serper (serper.dev) are **different services** with
+> incompatible APIs. A Serper key returns `403 Unauthorized` here. This project
+> targets SerpApi.
+
+No key yet? Set `MOCK_WEB_SEARCH=1` in `.env` and `web.search` serves labelled
+fixtures instead, so the rest of the pipeline still runs. `rag.search` needs no
+key at all — it is entirely local.
+
 ## Lanes
 
 | Person | Owns | Status |
 |---|---|---|
 | A | Data + retrieval (`retrieval.py`, Chroma index) | Done — working against real data |
-| B | MCP server (`web.search`, `rag.search`) | |
+| B | MCP server (`web.search`, `rag.search`) | Done — two tools on stdio, see [`docs/MCP.md`](docs/MCP.md) |
 | C | LangGraph orchestration (router / planner / retriever / answerer) | |
 | D | Voice (Whisper + TTS) and Streamlit UI | |
 
@@ -92,7 +109,154 @@ Download `promptcloud/amazon-product-dataset-2020` from Kaggle, put the CSV in
 This builds `data/products.parquet`, the Chroma index in `chroma/`, and runs a
 retrieval smoke test. Neither the raw CSV nor the index is committed.
 
+**You almost certainly do not need that.** `data/products.parquet` *is*
+committed, and `run_index.sh` starts by rebuilding it from the raw CSV — which is
+gitignored, so on a fresh clone step 1 fails and `set -e` aborts the script. To
+get a working index from what is already in the repo:
+
+```bash
+python build_index.py     # ~3 min: downloads the ONNX embedding model, embeds 6,461 docs
+```
+
+Do this on good wifi well before any demo — the first run pulls an ~80 MB model
+into `~/.cache/chroma`. Once cached, later runs are offline.
+
+## The MCP server — how the graph reaches the tools
+
+Two tools on stdio. Full schemas, caching, logging and safety notes in
+[`docs/MCP.md`](docs/MCP.md).
+
+```bash
+cp .env.example .env      # add SERPAPI_API_KEY
+python build_index.py     # required before rag.search works
+./run_mcp.sh              # or: python -m mcp_server.server
+
+npx @modelcontextprotocol/inspector python -m mcp_server.server
+```
+
+| Tool | Returns | Cite |
+|---|---|---|
+| `rag.search` | private catalogue products | `doc_id` |
+| `web.search` | live price / availability | `url` |
+
+`rating` and `ingredients` are declared in the `rag.search` schema because the
+brief specifies them, but are **always `null`** — see the corpus note above.
+Each response carries `unavailable_fields` saying so explicitly.
+
 ## Repo layout
+
+```
+retrieval.py          Person A — search() over the Chroma index
+build_catalog.py      raw Kaggle CSV -> data/products.parquet
+build_index.py        parquet -> chroma/
+run_index.sh          full rebuild (needs the raw CSV; see caveat below)
+run_mcp.sh            start the MCP server on stdio
+mcp_server/           Person B — MCP server
+  server.py             tool registration, stdio entry point
+  rag_tool.py           rag.search: adapter over retrieval.search
+  web_tool.py           web.search: SerpApi, rate limit, allowlist
+  providers.py          provider clients + fixture mode
+  cache.py              TTL cache (one class, one instance per tool)
+  jsonl_log.py          JSONL audit log with secret redaction
+  allowlist.py          domain allowlist for live results
+tests/                MCP server tests (pytest tests/ -q — no network)
+docs/DATA.md          corpus provenance and cleaning
+docs/MCP.md           MCP tool schemas and safety notes
+eval/                 20 hand-labelled retrieval queries
+data/products.parquet 6,461 products (committed)
+chroma/               vector index (gitignored — build locally)
+logs/                 JSONL tool audit log (gitignored)
+```
+
+## Part B — Development and Modifications
+
+What Person B built, and every change made to files owned by other lanes.
+
+### What was built
+
+One MCP server, `product-discovery`, exposing exactly two tools over **stdio**.
+Full schemas and safety notes live in [`docs/MCP.md`](docs/MCP.md).
+
+| Requirement | How it is met |
+|---|---|
+| Two working tools | `rag.search` (private Chroma catalogue) and `web.search` (live SerpApi) |
+| Tool discovery | Standard `tools/list`; both tools verified in an MCP client and the Inspector |
+| JSON schemas | Input **and** output schemas generated from Pydantic models, so they cannot drift from the code |
+| Transport | stdio, launched via `run_mcp.sh` (works from any working directory) |
+| TTL cache | `web.search` 180s (clamped to the required 60–300s window); `rag.search` 900s |
+| Request log | Append-only JSONL at `logs/mcp_requests.jsonl` — request, response, timestamp, source URLs, cache hit, duration, error |
+| Safety | Domain allowlist on live results, secret redaction, ToS/robots notes |
+
+**`rag.search`** is a thin adapter over Person A's `search()` — retrieval is not
+reimplemented, per the contract above. It returns `doc_id` as the citation
+handle and preserves the hard-constraint and empty-result guarantees.
+
+**`web.search`** returns `{title, url, snippet, price?, availability?}` and
+degrades rather than crashing: a dead key, timeout or exhausted quota yields
+`degraded: true` with an empty result list. This is deliberate — the same
+process serves `rag.search`, so a third-party outage must not take down both.
+
+**Caching** is one implementation (`mcp_server/cache.py`) instantiated once per
+tool, because the two have different staleness semantics: live prices must
+expire inside the graded window, while the Chroma index is static between
+rebuilds. No new dependency was added for it.
+
+**Tests:** `pytest tests/ -q` — 43 tests, no network, zero API quota spent.
+Covers TTL expiry and clamping, secret redaction, the domain allowlist,
+provider normalisation, degradation on a dead key, and the always-null
+`rating`/`ingredients` contract.
+
+### Fields the brief asks for that this corpus cannot supply
+
+The brief specifies `rating` and `ingredients` on `rag.search`. Neither exists
+in the dataset (see the corpus note above). They are **declared in the schema
+and always emitted as `null`** — not omitted, so anyone diffing against the
+brief can see they exist and see they are empty; and not fabricated, because an
+invented rating would flow straight into a cited recommendation. Every response
+carries `unavailable_fields: ["rating", "ingredients"]` so consumers can assert
+this programmatically instead of parsing prose.
+
+### Modifications to shared files
+
+**`retrieval.py` (Person A's file)** — three changes, no behaviour change to the
+search contract. A's smoke test still passes all seven cases unchanged.
+
+1. The Chroma path was the relative string `"chroma"`, resolved against the
+   caller's working directory. MCP clients launch the server from an arbitrary
+   cwd, where this silently created an *empty* `chroma/` directory and then
+   failed. It is now an absolute path derived from `__file__`, overridable with
+   `CHROMA_PATH`.
+2. The client and collection were opened at module import, so `import retrieval`
+   raised if the index had not been built — which would have killed the whole
+   MCP server at startup rather than failing one tool call. Initialisation is now
+   lazy, inside `_collection()`.
+3. `search()` called `_COL.count()` on every query and passed `n_results=0` when
+   the collection was empty. It now short-circuits to `[]`.
+
+**`requirements.txt`** — added `mcp==2.0.0`. This is the only new dependency;
+`httpx`, `pydantic`, `tenacity` and `python-dotenv` were already pinned and are
+reused rather than duplicated.
+
+**`.gitignore`** — added `logs/` (the JSONL log contains full user query text).
+
+**`README.md`** — added the API-key section at the top, the MCP server section,
+this section, and filled in the previously empty *Repo layout* heading. Also
+corrected the setup instructions: `./run_index.sh` cannot run on a fresh clone
+because its first step needs the raw Kaggle CSV, which is gitignored;
+`python build_index.py` is the working path since the parquet is committed.
+
+### Notes for Person C
+
+`docs/MCP.md` ends with a "For Person C" section covering the launch config,
+citation rules, and reconciliation guidance. Two things worth repeating here:
+
+- **Do not reconcile on `sku`.** Ours is a dataset hash, not a retail
+  identifier, so it will never match a live listing. Match on title similarity
+  (`RapidFuzz` is already in `requirements.txt`).
+- **`web.search` returns live star ratings; `rag.search.rating` is always
+  `null`.** They are different products from different sources. Presenting a
+  live rating as the catalogue product's rating is exactly the ungrounded claim
+  the Critic should catch.
 
 ## Workflow
 

@@ -7,14 +7,35 @@ Contract note: every key in Product is always present on every record.
 Missing values are None, never absent. Do not rely on .get() defaults.
 """
 
+import os
+from pathlib import Path
 from typing import TypedDict, Optional
 
 import chromadb
 
-_CLIENT = chromadb.PersistentClient(path="chroma")
-_COL = _CLIENT.get_collection("products")
+# Absolute so the collection resolves no matter what cwd the caller runs from.
+# The MCP server is launched by Inspector/Claude Desktop with an arbitrary cwd.
+CHROMA_PATH = os.environ.get(
+    "CHROMA_PATH", str(Path(__file__).resolve().parent / "chroma")
+)
 
 OVERFETCH = 60
+
+_COL = None
+
+
+def _collection():
+    """Open the collection on first use.
+
+    Deliberately lazy: importing this module must never raise just because the
+    index has not been built yet, or an unbuilt index takes down the whole MCP
+    server at startup instead of one tool call.
+    """
+    global _COL
+    if _COL is None:
+        client = chromadb.PersistentClient(path=CHROMA_PATH)
+        _COL = client.get_collection("products")
+    return _COL
 
 
 class Product(TypedDict):
@@ -60,9 +81,14 @@ def search(query: str, filters: dict = None, k: int = 10) -> list[Product]:
     """
     filters = filters or {}
 
-    res = _COL.query(
+    col = _collection()
+    n = col.count()
+    if n == 0:
+        return []
+
+    res = col.query(
         query_texts=[query],
-        n_results=min(OVERFETCH, _COL.count()),
+        n_results=min(OVERFETCH, n),
         where=_build_where(filters),
     )
 
