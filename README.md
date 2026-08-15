@@ -245,21 +245,79 @@ corrected the setup instructions: `./run_index.sh` cannot run on a fresh clone
 because its first step needs the raw Kaggle CSV, which is gitignored;
 `python build_index.py` is the working path since the parquet is committed.
 
-### Notes for Person C
+## Part C — LangGraph Orchestration
 
-`docs/MCP.md` ends with a "For Person C" section covering the launch config,
-citation rules, and reconciliation guidance. Two things worth repeating here:
+Four-node graph: Router → Planner → Retriever → Critic. Full pipeline tested
+against 10 hand-written transcripts covering age-stripping, price ranges,
+brand/subcategory filters, live-intent triggers, safety flags, and the
+known out-of-scope case (a non-toy query against a toy catalog).
 
-- **Do not reconcile on `sku`.** Ours is a dataset hash, not a retail
-  identifier, so it will never match a live listing. Match on title similarity
-  (`RapidFuzz` is already in `requirements.txt`).
-- **`web.search` returns live star ratings; `rag.search.rating` is always
-  `null`.** They are different products from different sources. Presenting a
-  live rating as the catalogue product's rating is exactly the ungrounded claim
-  the Critic should catch.
+### Nodes
 
-## Workflow
+| Node | Job | LLM used? |
+|---|---|---|
+| Router | Extracts `max_price`, `min_price`, `subcategory`, `brand`, `safety_flags`, `age_mentioned`, `raw_task` from the transcript | Yes — structured JSON output |
+| Planner | Decides whether to call `web.search` in addition to `rag.search`, based on live-intent trigger words | No — rule-based, deterministic |
+| Retriever | Calls both MCP tools, reconciles `rag.search`/`web.search` results by title similarity (RapidFuzz), computes discrepancy flags | No |
+| Critic | Synthesizes a short, cited, grounded answer from reconciled evidence | Yes — structured JSON output |
 
-Commit directly to `main` — with four lanes touching different files over ten
-days, PR review costs more than it saves. `git pull` before you start,
-`git push` when you stop.
+### Router
+
+- Age is extracted for safety-flag purposes only, never used as a filter —
+  per the corpus note above, age filtering degrades retrieval quality here.
+- `subcategory` is constrained to the actual set of values present in
+  `products.parquet`; the model cannot invent a category.
+- Out-of-scope requests (e.g., non-toy items) still extract real
+  price/brand constraints — only `subcategory` is nulled.
+- Output is validated against a strict schema (type + allowed-value checks)
+  before use. On failure, the node retries once with the validation error
+  fed back to the model; if it fails twice, falls back to an unfiltered,
+  all-null constraint set rather than passing bad data downstream.
+
+### Planner
+
+Rule-based by design (see `docs/MCP.md`'s "For Person C" section) — always
+calls `rag.search`; adds `web.search` when the transcript matches a
+live-intent trigger list (current/price/availability/now/latest, plus
+availability- and existence-phrasing). Logs which specific triggers matched
+in `plan.reason`, for transparency in the agent step log.
+
+### Retriever
+
+- Parses raw MCP `TextContent` responses into plain dicts.
+- Reconciles `rag.search` and `web.search` results by title similarity
+  (RapidFuzz `token_set_ratio`, threshold 75, after stripping retailer/mock
+  boilerplate from titles) — never by `sku`, per the corpus note.
+- Classifies each result as `matched`, `rag_only`, or `web_only`.
+- Flags discrepancies per matched pair: price mismatch (>$5 or >15%), a
+  live rating present where the catalog has none, and whether the live
+  data came back `degraded`/mock (`MOCK_WEB_SEARCH=1`).
+
+### Critic
+
+- Computes catalog relevance in code (rag similarity `score` ≥ 0.5) before
+  the LLM ever runs — the model is told the fact ("no relevant results"),
+  it doesn't judge the threshold itself.
+- `rating` and `ingredients` are structurally excluded from what the model
+  sees, not just null-checked, so they can't be referenced by mistake.
+- Mock/degraded live data is explicitly hedged as unconfirmed rather than
+  stated as fact.
+- Non-empty `safety_flags` produce a brief natural-language caution in the
+  spoken answer.
+- Same validate → retry-once → fail-closed pattern as the Router.
+
+### Integration point
+
+`entrypoint.py` exposes one async function, `get_recommendation(transcript: str) -> dict`,
+plus `shutdown()`. This is the only thing Person D's UI needs to call — see
+`docs/` or ask Person C for the exact output shape.
+
+### Known limitations
+
+- MCP server's `filters_applied` does not currently reflect/enforce
+  `brand`/`subcategory` filters server-side (flagged to Person B) — retrieval
+  precision on brand-scoped queries is lower than intended until fixed.
+- Fuzzy-match threshold (80) was tuned against `MOCK_WEB_SEARCH=1` fixture
+  data, which has different title formatting than real SerpApi results —
+  worth re-validating once tested against a real key.
+- Graph doesn't support any follow-up/correction turns 
