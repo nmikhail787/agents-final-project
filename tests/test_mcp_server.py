@@ -304,13 +304,74 @@ def test_web_search_reports_blocked_domains(monkeypatch):
 def test_unset_filters_are_dropped_not_passed_as_none():
     """Person A treats any present key as a hard constraint, so passing
     None through would over-constrain the query."""
-    assert _clean_filters(None, None, None, None) == {}
-    assert _clean_filters(30, None, None, None) == {"max_price": 30.0}
+    assert _clean_filters(None, None, None, None) == ({}, [])
+    assert _clean_filters(30, None, None, None) == ({"max_price": 30.0}, [])
 
 
 def test_filters_are_coerced_and_blank_strings_dropped():
-    out = _clean_filters(30, 5, "", "")
+    out, warnings = _clean_filters(30, 5, "", "")
     assert out == {"max_price": 30.0, "min_price": 5.0}
+    assert warnings == []
+
+
+# --- the regression that cost Person C a day: nested vs flat filter shapes ---
+
+def test_nested_filters_dict_is_honoured():
+    """The bug: the graph passed {"query":..., "filters":{...}}, which bound to
+    nothing, so every search ran unfiltered."""
+    out, _ = _clean_filters(None, None, None, None, {"max_price": 30})
+    assert out == {"max_price": 30.0}
+
+
+def test_nested_and_flat_shapes_are_equivalent():
+    nested, _ = _clean_filters(None, None, None, None, {"max_price": 30})
+    flat, _ = _clean_filters(30, None, None, None, None)
+    assert nested == flat
+
+
+def test_all_four_filters_work_nested():
+    out, warnings = _clean_filters(
+        None, None, None, None,
+        {"max_price": 30, "min_price": 5, "subcategory": "Building Toys", "brand": "LEGO"},
+    )
+    assert out == {
+        "max_price": 30.0, "min_price": 5.0,
+        "subcategory": "Building Toys", "brand": "LEGO",
+    }
+    assert warnings == []
+
+
+def test_flat_argument_overrides_nested_on_conflict():
+    out, _ = _clean_filters(10, None, None, None, {"max_price": 30})
+    assert out == {"max_price": 10.0}
+
+
+def test_nested_none_values_are_dropped():
+    """The router emits {'subcategory': None, 'brand': None} for unset fields."""
+    out, _ = _clean_filters(
+        None, None, None, None,
+        {"max_price": 25, "min_price": 15, "subcategory": None, "brand": None},
+    )
+    assert out == {"max_price": 25.0, "min_price": 15.0}
+
+
+def test_unsupported_filter_key_is_reported_not_silently_dropped():
+    """A silently ignored argument is exactly what made the original bug
+    invisible. An unknown key must surface in the response."""
+    out, warnings = _clean_filters(None, None, None, None, {"maxprice": 30})
+    assert out == {}
+    assert len(warnings) == 1
+    assert "maxprice" in warnings[0]
+
+
+def test_filters_applied_is_not_accepted_as_an_input_name():
+    """`filters_applied` is a RESPONSE field. Passing it as input must not
+    silently behave like `filters` — it should be reported."""
+    out, warnings = _clean_filters(
+        None, None, None, None, {"filters_applied": {"max_price": 30}}
+    )
+    assert out == {}
+    assert warnings and "filters_applied" in warnings[0]
 
 
 ROW = {
@@ -340,3 +401,43 @@ def test_doc_id_survives_mapping_as_the_citation_handle():
 
 def test_null_brand_is_preserved():
     assert _to_result({**ROW, "brand": None}).brand is None
+
+
+# --------------------------------------------------------------------------
+# Server registration. These exist because 44 tests once passed green while
+# `mcp_server.server` could not be imported at all: installing the LangGraph
+# dependency tree downgraded mcp 2.x -> 1.x, which moved the server class.
+# Nothing in the suite touched server.py, so the breakage was invisible.
+# --------------------------------------------------------------------------
+
+def test_server_module_imports():
+    """Fails loudly if the installed mcp SDK moves the server class again."""
+    from mcp_server.server import server
+
+    assert server.name == "product-discovery"
+
+
+def test_both_tools_register_with_the_expected_names():
+    import asyncio
+
+    from mcp_server.server import server
+
+    tools = asyncio.run(server.list_tools())
+    assert {t.name for t in tools} == {"rag.search", "web.search"}
+
+
+def test_rag_search_schema_exposes_both_filter_shapes():
+    """Guards the contract itself: a consumer must be able to discover that
+    nested `filters` and the flat params both exist."""
+    import asyncio
+
+    from mcp_server.server import server
+
+    tools = asyncio.run(server.list_tools())
+    rag = next(t for t in tools if t.name == "rag.search")
+    # Attribute casing differs between SDK majors (2.x input_schema, 1.x inputSchema).
+    schema = getattr(rag, "input_schema", None) or getattr(rag, "inputSchema")
+    props = schema["properties"]
+    for name in ("query", "k", "filters", "max_price", "min_price", "subcategory", "brand"):
+        assert name in props, f"{name} missing from rag.search schema"
+    assert schema["required"] == ["query"]

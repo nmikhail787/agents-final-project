@@ -109,9 +109,12 @@ async def retriever_node(state: AgentState):
     # MCP server conenction: open connection once and shut down when everything done
 
     # always run rag search
+    # NOTE: the input parameter is `filters`. `filters_applied` is a RESPONSE
+    # field echoing what the server actually used — check it to confirm the
+    # filters landed, since unknown arguments are dropped without an error.
     rag_result = await async_server_connection.mcp_session.call_tool(
         "rag.search",
-        arguments={"query": constraints["raw_task"], "filters_applied": filters},
+        arguments={"query": constraints["raw_task"], "filters": filters},
     )
     # validate and dtype fix
     rag_parsed = parse_mcp_result(rag_result.content)
@@ -122,9 +125,12 @@ async def retriever_node(state: AgentState):
     # only run web if indicated by prior node
     web_result = None
     if plan["call_web"]:
+        # web.search takes no filters — it searches the live web, which has no
+        # catalogue metadata to constrain. Price screening happens downstream in
+        # reconcile_results. Its params are: query, num, search_type.
         web_result = await async_server_connection.mcp_session.call_tool(
             "web.search",
-            arguments={"query": constraints["raw_task"], "filters_applied": filters},
+            arguments={"query": constraints["raw_task"]},
         )
 
         # validate outputs and put in same dtype 

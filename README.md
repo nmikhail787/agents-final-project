@@ -78,6 +78,13 @@ Behaviour guarantees:
 **Person B:** expose this as the MCP `rag.search` tool by importing `search`.
 Do not reimplement it — the graph should reach the catalog only through MCP.
 
+**Calling it through MCP:** the `rag.search` tool accepts filters *either* nested
+as `filters={"max_price": 30}` (the shape above) *or* as flat arguments
+(`max_price=30`). Both are equivalent. Always check the response's
+`filters_applied` field — the MCP SDK silently drops arguments that aren't in a
+tool's schema, so a misnamed filter looks like a successful unfiltered search.
+See [`docs/MCP.md`](docs/MCP.md) for a worked example.
+
 ## Retrieval quality
 
 Measured over 20 hand-labelled queries (`eval/labeled.csv`):
@@ -159,7 +166,7 @@ mcp_server/           Person B — MCP server
   cache.py              TTL cache (one class, one instance per tool)
   jsonl_log.py          JSONL audit log with secret redaction
   allowlist.py          domain allowlist for live results
-tests/                MCP server tests (pytest tests/ -q — no network)
+tests/                MCP server tests (pytest tests/test_mcp_server.py -q)
 docs/DATA.md          corpus provenance and cleaning
 docs/MCP.md           MCP tool schemas and safety notes
 eval/                 20 hand-labelled retrieval queries
@@ -244,6 +251,37 @@ this section, and filled in the previously empty *Repo layout* heading. Also
 corrected the setup instructions: `./run_index.sh` cannot run on a fresh clone
 because its first step needs the raw Kaggle CSV, which is gitignored;
 `python build_index.py` is the working path since the parquet is committed.
+
+### Post-integration fixes (after Part C landed)
+
+**`rag.search` silently ignored every filter.** The tool exposed filters as flat
+arguments (`max_price=30`) while the graph passed a nested dict
+(`filters={"max_price": 30}`) — the shape the retrieval contract above documents.
+The MCP SDK builds its argument model with Pydantic's default `extra="ignore"`
+and emits no `additionalProperties: false`, so an unknown argument is dropped
+with no error: every search ran unfiltered while looking completely healthy. The
+only visible signal was `filters_applied: {}` in the response.
+
+Fixed by accepting **both** shapes, flat winning on conflict, so the repo now
+tells one story. Unrecognised keys inside `filters` are reported in a new
+`warnings` field instead of being dropped. `docs/MCP.md` gained a worked example
+— its absence was the real root cause, since the params table was correct but a
+table is not what anyone reaches for when wiring up a call.
+
+**The server stopped importing entirely.** Installing the LangGraph/OpenAI
+dependency tree downgraded `mcp` from 2.0.0 to 1.29.0, which moved the server
+class (`MCPServer` → `FastMCP`). `mcp_server/server.py` now imports either, and
+`langchain`/`langgraph`/`openai` are declared in `requirements.txt` so the pin
+cannot be broken silently again.
+
+**The test suite gave a false green.** All 44 tests passed while the server could
+not be imported at all, because nothing in the suite touched `server.py`. Added
+registration tests that fail loudly on exactly that, plus regression tests for
+both filter shapes and each of the four reported cases. Now 54.
+
+**`.env` was tracked in git.** It had been renamed from `.env.example`, and
+`.gitignore` does not apply to already-tracked files — the next real key
+committed would have gone to GitHub. `.env.example` restored, `.env` untracked.
 
 ## Part C — LangGraph Orchestration
 

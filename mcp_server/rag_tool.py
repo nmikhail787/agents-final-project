@@ -58,10 +58,17 @@ class RagSearchResponse(BaseModel):
     unavailable_fields: list[str] = Field(
         description="Fields the brief requires that have no source in this corpus and are always null.",
     )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Problems with the request itself, e.g. an unrecognised filter key that was ignored.",
+    )
     notes: list[str] = Field(description="Human-readable caveats for the answering agent.")
 
 
 UNAVAILABLE_FIELDS = ["rating", "ingredients"]
+
+
+SUPPORTED_FILTERS = ("max_price", "min_price", "subcategory", "brand")
 
 
 def _clean_filters(
@@ -69,19 +76,54 @@ def _clean_filters(
     min_price: Optional[float],
     subcategory: Optional[str],
     brand: Optional[str],
-) -> dict[str, Any]:
-    """Drop unset filters. Person A's _build_where treats any present key as a
-    hard constraint, so passing None through would over-constrain the query."""
+    filters: Optional[dict[str, Any]] = None,
+) -> tuple[dict[str, Any], list[str]]:
+    """Merge the nested `filters` dict with the flat arguments.
+
+    Two shapes exist because Person A's contract (README) is `search(query,
+    filters: dict, k)` while an MCP tool schema is more useful to an LLM caller
+    with explicit typed arguments. Accepting only one of them is what caused the
+    graph to silently run unfiltered: a nested dict bound to nothing, and the
+    SDK drops unknown arguments without error.
+
+    Flat arguments win on conflict — they are the more explicit of the two.
+    Returns (filters, warnings); unrecognised keys are reported rather than
+    ignored, so the next typo is visible in the response.
+    """
+    merged: dict[str, Any] = {}
+    warnings: list[str] = []
+
+    if filters:
+        for key, value in filters.items():
+            if key not in SUPPORTED_FILTERS:
+                warnings.append(
+                    f"Ignored unsupported filter {key!r}. Supported: "
+                    f"{', '.join(SUPPORTED_FILTERS)}."
+                )
+                continue
+            if value is not None:
+                merged[key] = value
+
+    # Flat arguments override anything of the same name inside `filters`.
+    for key, value in (
+        ("max_price", max_price),
+        ("min_price", min_price),
+        ("subcategory", subcategory),
+        ("brand", brand),
+    ):
+        if value is not None:
+            merged[key] = value
+
     out: dict[str, Any] = {}
-    if max_price is not None:
-        out["max_price"] = float(max_price)
-    if min_price is not None:
-        out["min_price"] = float(min_price)
-    if subcategory:
-        out["subcategory"] = subcategory
-    if brand:
-        out["brand"] = brand
-    return out
+    if merged.get("max_price") is not None:
+        out["max_price"] = float(merged["max_price"])
+    if merged.get("min_price") is not None:
+        out["min_price"] = float(merged["min_price"])
+    if merged.get("subcategory"):
+        out["subcategory"] = merged["subcategory"]
+    if merged.get("brand"):
+        out["brand"] = merged["brand"]
+    return out, warnings
 
 
 def _to_result(row: dict[str, Any]) -> RagResult:
@@ -109,11 +151,14 @@ def run_rag_search(
     min_price: Optional[float] = None,
     subcategory: Optional[str] = None,
     brand: Optional[str] = None,
+    filters_arg: Optional[dict[str, Any]] = None,
 ) -> RagSearchResponse:
     """Synchronous core. Called off the event loop by the server."""
     started = time.perf_counter()
     k = max(1, min(int(k), 25))
-    filters = _clean_filters(max_price, min_price, subcategory, brand)
+    filters, warnings = _clean_filters(
+        max_price, min_price, subcategory, brand, filters_arg
+    )
 
     request = {"query": query, "k": k, "filters": filters}
     cache_key = make_key("rag.search", query, k, filters)
@@ -146,6 +191,7 @@ def run_rag_search(
         query=query,
         filters_applied=filters,
         unavailable_fields=list(UNAVAILABLE_FIELDS),
+        warnings=warnings,
         notes=notes,
     )
 

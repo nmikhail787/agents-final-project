@@ -27,13 +27,19 @@ npx @modelcontextprotocol/inspector python -m mcp_server.server
 Test it:
 
 ```bash
-pytest tests/ -q      # 43 tests, no network — the provider is monkeypatched
+pytest tests/test_mcp_server.py -q    # 54 tests, no network, no API key needed
+python tests/debug_filter_bug.py      # end-to-end filter check over a live stdio session
 ```
 
-The suite deliberately spends no SerpApi quota. It covers TTL expiry and
-clamping, secret redaction, the domain allowlist, provider normalisation
-(including the `num`-ignored and `link: null` quirks), degradation on a dead
-key, and the always-null `rating`/`ingredients` contract.
+The suite deliberately spends no SerpApi quota — the provider is monkeypatched.
+It covers TTL expiry and clamping, secret redaction, the domain allowlist,
+provider normalisation (including the `num`-ignored and `link: null` quirks),
+degradation on a dead key, the always-null `rating`/`ingredients` contract,
+server/tool registration, and both filter shapes.
+
+> Run the file, not the directory. `pytest tests/` also collects the LangGraph
+> node tests, which make live OpenAI calls at import time and abort collection
+> without a real `OPENAI_API_KEY`.
 
 > **Do not run `./run_index.sh`.** Its first step rebuilds the parquet from the
 > raw Kaggle CSV, which is gitignored and not in the repo, so `set -e` aborts the
@@ -64,10 +70,44 @@ Vector search with hard metadata filters over the private catalogue.
 |---|---|---|---|
 | `query` | string | *required* | Natural-language product description. |
 | `k` | integer | 5 | Clamped to 1–25. |
+| `filters` | object \| null | null | Nested filter dict — same four keys as below. |
 | `max_price` | number \| null | null | Hard upper bound, USD. |
 | `min_price` | number \| null | null | Hard lower bound, USD. |
 | `subcategory` | string \| null | null | Exact match, e.g. `"Building Toys"`, `"Puzzles"`. |
 | `brand` | string \| null | null | Exact match. Unreliable — see caveats. |
+
+### Example call
+
+Filters may be passed **nested** or **flat**. These two are exactly equivalent:
+
+```python
+# nested — matches Person A's retrieval contract in the README
+await session.call_tool("rag.search", arguments={
+    "query": "building set",
+    "filters": {"max_price": 30, "subcategory": "Building Toys"},
+})
+
+# flat — better for LLM tool-calling, since each argument is typed in the schema
+await session.call_tool("rag.search", arguments={
+    "query": "building set",
+    "max_price": 30,
+    "subcategory": "Building Toys",
+})
+```
+
+If both are supplied, the **flat argument wins** for that key.
+
+> **`filters_applied` is a RESPONSE field, not an input parameter.** Passing it as
+> an argument does nothing. The MCP SDK silently drops arguments that are not in
+> a tool's schema — no error, no warning — so a misnamed filter argument produces
+> a perfectly normal-looking unfiltered result. Guard against it in one line:
+>
+> ```python
+> assert parsed["filters_applied"] == filters_you_sent
+> ```
+>
+> Unrecognised keys *inside* the `filters` object are reported in the response's
+> `warnings` list rather than ignored.
 
 ### Output
 
@@ -91,8 +131,9 @@ Vector search with hard metadata filters over the private catalogue.
   ],
   "count": 1,
   "query": "building set for a seven year old",
-  "filters_applied": { "max_price": 30.0 },
+  "filters_applied": { "max_price": 30.0 },   // echoes what was ACTUALLY applied
   "unavailable_fields": ["rating", "ingredients"],
+  "warnings": [],                              // unrecognised filter keys land here
   "notes": ["rating and ingredients are null for every row: absent from the source dataset."]
 }
 ```
@@ -293,8 +334,18 @@ Launch config:
 
 Contract points that affect your nodes:
 
+- **Filters — pass them as `filters={...}` or as flat arguments.** Both work; see
+  *Example call* above. `filters_applied` in the response is an *echo of what was
+  used*, not an input name. Because the SDK drops unknown arguments silently, a
+  misnamed filter argument yields a normal-looking but completely unfiltered
+  result — assert `filters_applied` matches what you sent.
+- **`web.search` takes no filters.** Its parameters are `query`, `num`,
+  `search_type`. It searches the live web, which has no catalogue metadata to
+  constrain; screen prices downstream during reconciliation.
 - **Citations:** `rag.search` → cite `doc_id` (e.g. `T00497`). `web.search` →
-  cite `url`. Every private claim needs a `doc_id`.
+  cite `url`. Every private claim needs a `doc_id`. Note that `rag.search` also
+  returns a real product `url` for all 6,461 rows if you want click-through links
+  in the UI.
 - **Planner rule:** prefer `rag.search` for product facts; also call `web.search`
   when the user says *current price*, *availability*, *now*, or *latest*.
 - **Reconciliation:** match `rag.search` results to `web.search` results on title
