@@ -136,8 +136,60 @@ async def retriever_node(state: AgentState):
         # validate outputs and put in same dtype 
         web_parsed = parse_mcp_result(web_result.content)
 
-    # reconcile results 
+    # reconcile results
     merged = reconcile_results(rag_parsed["results"], web_parsed["results"])
+
+    # Enforce explicit price constraints on the FINAL merged results.
+    #
+    # reconcile_results stores prices inside nested rag_item/web_item objects:
+    #   rag_only  -> item["rag_item"]["price"]
+    #   web_only  -> item["web_item"]["price"]
+    #   matched   -> both may exist
+    #
+    # For matched results, prefer the live web price when one exists because
+    # a live-intent request is asking about the current price; otherwise fall
+    # back to the private-catalog price.
+    def _clean_price(value):
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        cleaned = str(value).replace("$", "").replace(",", "").strip()
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    def _effective_price(merged_item):
+        web_item = merged_item.get("web_item") or {}
+        rag_item = merged_item.get("rag_item") or {}
+
+        web_price = _clean_price(web_item.get("price"))
+        rag_price = _clean_price(rag_item.get("price"))
+
+        return web_price if web_price is not None else rag_price
+
+    max_price = constraints.get("max_price")
+    min_price = constraints.get("min_price")
+
+    if max_price is not None or min_price is not None:
+        filtered = []
+
+        for item in merged:
+            price = _effective_price(item)
+
+            # If a result has a known price, it must satisfy the user's budget.
+            # Keep unknown-price rows because we cannot truthfully classify them
+            # as over-budget.
+            if price is not None:
+                if max_price is not None and price > float(max_price):
+                    continue
+                if min_price is not None and price < float(min_price):
+                    continue
+
+            filtered.append(item)
+
+        merged = filtered
 
     return {
         "raw_rag_results": rag_parsed["results"],
